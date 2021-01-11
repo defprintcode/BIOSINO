@@ -20,44 +20,44 @@ def sound_sys(sound, infinite):
     else :
         pygame.mixer.music.play(1)
 
-def send_biosino(sysOrder):
-    arduino.write(str(sysOrder).encode())
-    #sound_sys("send", "no")
-    #print(sysOrder)
+def write_log(order,text):
+    
     with open(csv, "a") as log:
-        temp = str(CPUTemperature().temperature)
-        log.write("{0},{1}\n".format(strftime("%Y-%m-%d %H:%M:%S"),str("SEND "+sysOrder)))
+        log.write("{0},{1},{2}\n".format(strftime("%Y-%m-%d %H:%M:%S"),str(order),str(text)))
 
+def send_biosino(sysOrder):
+    
+    arduino.write(str(sysOrder).encode())
+    write_log("STATUS",sysOrder)
+    
 try:
     arduino = serial.Serial('/dev/ttyUSB0', baudrate=9600, timeout=1.0)
-    with open(csv, "a") as log:
-        temp = str(CPUTemperature().temperature)
-        log.write("{0},{1}\n".format(strftime("%Y-%m-%d %H:%M:%S"),str("CONECTADO CORRECTAMENTE")))
+    write_log("STATUS","CONECTED")
+    ardu_con = "ok"
 except:
-    #print("ALERTA ALGO PASA CON LA VENTILACION")
-    #sound_sys("bioAlert", "no")
-    with open(csv, "a") as log:
-        temp = str(CPUTemperature().temperature)
-        log.write("{0},{1}\n".format(strftime("%Y-%m-%d %H:%M:%S"),str("Error 404 /dev/ttyUSB0")))
+    write_log("STATUS","ERROR /dev/ttyUSB0")
+    ardu_con = "no"
 
 while True:
-    with open(csv, "a") as log:
-        temp = str(CPUTemperature().temperature)
-        #print(temp)
-        log.write("{0},{1}\n".format(strftime("%Y-%m-%d %H:%M:%S"),str(temp)))
+    print("Obteniendo temperatura")
+    temp = str(CPUTemperature().temperature)
+    print(temp)
+    write_log("TEMP",temp)
+    print("Arduino conectado ["+ardu_con+"]")
     sleep(3)
-    if CPUTemperature().temperature < 40:
-        send_biosino("fanOff")
+
+    if ardu_con == "ok":
+        if CPUTemperature().temperature < 40:
+            send_biosino("fanOff")
+        else:
+            if CPUTemperature().temperature > 45:
+                send_biosino("fanOn")
     
-    if CPUTemperature().temperature > 45:
-        send_biosino("fanOn")
-    
-    if CPUTemperature().temperature >= 60:
-        sound_sys("temp","yes")
-        sleep(60)
-        sound_sys("temp", "yes")
+        if CPUTemperature().temperature >= 60:
+            sound_sys("temp","yes")
+            sleep(60)
+        else:
+            sleep(120)
     else:
-        #print("cya in 120s")
+        print("esperando para la siguiente lectura")
         sleep(120)
-
-
